@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ScrapedItem } from '../types';
 
@@ -21,8 +22,8 @@ const ScrapeTable: React.FC<ScrapeTableProps> = ({ items }) => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-100">
-            {items.map((item) => (
-              <tr key={item.id} className="hover:bg-brand-gold/10 transition-colors">
+            {items.map((item, idx) => (
+              <tr key={idx} className="hover:bg-brand-gold/10 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-brand-purple">
                   {item.title}
                 </td>
