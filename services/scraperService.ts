@@ -2,9 +2,11 @@
 import * as XLSX from 'xlsx';
 import { ScrapeResponse, ScrapedItem } from '../types';
 
-// As configurações agora são lidas das variáveis de ambiente
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || ''; 
+// Em ambientes de execução baseados em Node/Browser polyfill como este, 
+// as variáveis de ambiente são injetadas no objeto process.env.
+// O uso de import.meta.env é específico para builds Vite locais.
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || ''; 
 const EDGE_FUNCTION_NAME = 'scraping-apontador';
 
 export const scraperService = {
@@ -12,18 +14,20 @@ export const scraperService = {
    * Dispara a Edge Function do Supabase para fazer o scraping da URL
    */
   async scrapeUrl(url: string, onProgress?: (p: number) => void): Promise<ScrapeResponse> {
+    let progressInterval: any = null;
+    
     try {
       if (!SUPABASE_URL) {
-        throw new Error('Configuração SUPABASE_URL não encontrada. Verifique seu arquivo .env');
+        throw new Error('Configuração VITE_SUPABASE_URL não encontrada no process.env. Verifique se as variáveis de ambiente foram configuradas corretamente.');
       }
 
       if (onProgress) {
         let p = 0;
-        const interval = setInterval(() => {
-          p += Math.random() * 15;
+        progressInterval = setInterval(() => {
+          p += Math.random() * 10;
           if (p >= 90) {
-            clearInterval(interval);
-            onProgress(95);
+            // Mantém em 90% até a resposta chegar de fato
+            onProgress(90);
           } else {
             onProgress(p);
           }
@@ -40,18 +44,24 @@ export const scraperService = {
       });
 
       if (!response.ok) {
-        throw new Error(`Erro ${response.status}: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Erro ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
       
-      // LOG DE DEPURAÇÃO SOLICITADO
+      // LOG DE DEPURAÇÃO
       console.log("Dados recebidos da Edge Function:", data);
 
       if (onProgress) onProgress(100);
       
-      // Ajuste para capturar a chave 'results' do JSON enviado pela função
-      const results = data.results || [];
+      // Ajuste para capturar a chave 'results' e garantir que cada item tenha um ID
+      const rawResults = data.results || [];
+      const results: ScrapedItem[] = rawResults.map((item: any, index: number) => ({
+        ...item,
+        id: item.id || `item-${index}-${Date.now()}` // Garante ID único para chaves do React
+      }));
+      
       const fileBase64 = data.fileBase64 || null;
       
       return {
@@ -66,6 +76,11 @@ export const scraperService = {
         data: [],
         error: error.message || 'Erro desconhecido ao processar scraping.'
       };
+    } finally {
+      // Limpeza robusta do intervalo de progresso
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
     }
   },
 
@@ -74,6 +89,7 @@ export const scraperService = {
    */
   exportToExcel(data: ScrapedItem[]) {
     const formattedData = data.map(item => ({
+      'ID': item.id,
       'Título': item.title,
       'Categoria': item.category || 'N/A',
       'Preço': item.price || '-',
@@ -85,7 +101,7 @@ export const scraperService = {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Dados Capturados");
     
-    const wscols = [{wch: 40}, {wch: 20}, {wch: 15}, {wch: 50}, {wch: 25}];
+    const wscols = [{wch: 15}, {wch: 40}, {wch: 20}, {wch: 15}, {wch: 50}, {wch: 25}];
     worksheet['!cols'] = wscols;
 
     const timestamp = new Date().getTime();
