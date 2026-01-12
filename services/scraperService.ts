@@ -43,11 +43,14 @@ export const scraperService = {
       
       if (onProgress) onProgress(100);
       
-      const results = Array.isArray(data) ? data : (data.results || []);
+      // Ajuste conforme sugerido: captura resultados do objeto e também o fileBase64 se existir
+      const results = data.results || (Array.isArray(data) ? data : []);
+      const fileBase64 = data.fileBase64 || null;
       
       return {
         success: true,
-        data: results
+        data: results,
+        fileBase64: fileBase64
       };
     } catch (error: any) {
       console.error('Scraping falhou:', error);
@@ -60,10 +63,9 @@ export const scraperService = {
   },
 
   /**
-   * Gera e baixa o arquivo Excel (.xlsx) a partir dos itens capturados
+   * Gera e baixa o arquivo Excel (.xlsx) a partir dos itens capturados (Geração Local)
    */
   exportToExcel(data: ScrapedItem[]) {
-    // Mapeia os dados para ter cabeçalhos bonitos em português no Excel
     const formattedData = data.map(item => ({
       'Título': item.title,
       'Categoria': item.category || 'N/A',
@@ -76,44 +78,21 @@ export const scraperService = {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Dados Capturados");
     
-    // Define a largura das colunas para melhor visualização
-    const wscols = [
-      {wch: 40}, // Título
-      {wch: 20}, // Categoria
-      {wch: 15}, // Preço
-      {wch: 50}, // Link
-      {wch: 25}  // Data
-    ];
+    const wscols = [{wch: 40}, {wch: 20}, {wch: 15}, {wch: 50}, {wch: 25}];
     worksheet['!cols'] = wscols;
 
-    // Gera o nome do arquivo com timestamp para evitar duplicatas
     const timestamp = new Date().getTime();
     const fileName = `scraping_resultado_${timestamp}.xlsx`;
-    
-    // Dispara o download nativo do navegador
     XLSX.writeFile(workbook, fileName);
   },
 
   /**
-   * Mock para demonstração caso o endpoint não responda
+   * Faz o download de um arquivo Excel vindo em Base64 da Edge Function
    */
-  async mockScrape(url: string, onProgress: (p: number) => void): Promise<ScrapeResponse> {
-    return new Promise((resolve) => {
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 20;
-        onProgress(progress);
-        if (progress >= 100) {
-          clearInterval(interval);
-          resolve({
-            success: true,
-            data: [
-              { id: 1, title: 'Item Exemplo 1', link: url, price: 'R$ 100,00', category: 'Geral', timestamp: new Date().toISOString() },
-              { id: 2, title: 'Item Exemplo 2', link: url, price: 'R$ 250,00', category: 'Premium', timestamp: new Date().toISOString() }
-            ]
-          });
-        }
-      }, 200);
-    });
+  downloadBase64Excel(base64: string, fileName: string) {
+    const link = document.createElement("a");
+    link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64}`;
+    link.download = fileName;
+    link.click();
   }
 };

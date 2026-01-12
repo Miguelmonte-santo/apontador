@@ -11,6 +11,7 @@ const App: React.FC = () => {
   const [status, setStatus] = useState<ScrapeStatus>(ScrapeStatus.IDLE);
   const [progress, setProgress] = useState<number>(0);
   const [results, setResults] = useState<ScrapedItem[]>([]);
+  const [serverFile, setServerFile] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleScrape = async (e: React.FormEvent) => {
@@ -19,15 +20,18 @@ const App: React.FC = () => {
 
     setError(null);
     setResults([]);
+    setServerFile(null);
     setProgress(0);
     setStatus(ScrapeStatus.SCRAPING);
 
     try {
-      // Connect to the provided Edge Function endpoint
       const response = await scraperService.scrapeUrl(url, (p) => setProgress(p));
       
       if (response.success) {
         setResults(response.data);
+        if (response.fileBase64) {
+          setServerFile(response.fileBase64);
+        }
         setStatus(ScrapeStatus.COMPLETED);
       } else {
         throw new Error(response.error);
@@ -39,7 +43,11 @@ const App: React.FC = () => {
   };
 
   const handleDownload = () => {
-    if (results.length > 0) {
+    if (serverFile) {
+      // Se a Edge Function enviou um arquivo, baixa ele
+      scraperService.downloadBase64Excel(serverFile, `scraping_apontador_${Date.now()}.xlsx`);
+    } else if (results.length > 0) {
+      // Caso contrário, gera um localmente como fallback
       scraperService.exportToExcel(results);
     }
   };

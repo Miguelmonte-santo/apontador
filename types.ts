@@ -12,6 +12,7 @@ export interface ScrapedItem {
 export interface ScrapeResponse {
   success: boolean;
   data: ScrapedItem[];
+  fileBase64?: string; // Armazena o Excel pré-gerado pela Edge Function
   error?: string;
 }
 
