@@ -2,9 +2,9 @@
 import * as XLSX from 'xlsx';
 import { ScrapeResponse, ScrapedItem } from '../types';
 
-// Endpoint fornecido pelo usuário: https://aivwdcopudjzrrrbuquf.supabase.co/functions/v1/scraping-apontador
-const SUPABASE_URL = 'https://aivwdcopudjzrrrbuquf.supabase.co';
-const SUPABASE_ANON_KEY = 'your-anon-key-here'; 
+// As configurações agora são lidas das variáveis de ambiente
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || ''; 
 const EDGE_FUNCTION_NAME = 'scraping-apontador';
 
 export const scraperService = {
@@ -13,6 +13,10 @@ export const scraperService = {
    */
   async scrapeUrl(url: string, onProgress?: (p: number) => void): Promise<ScrapeResponse> {
     try {
+      if (!SUPABASE_URL) {
+        throw new Error('Configuração SUPABASE_URL não encontrada. Verifique seu arquivo .env');
+      }
+
       if (onProgress) {
         let p = 0;
         const interval = setInterval(() => {
@@ -41,10 +45,13 @@ export const scraperService = {
 
       const data = await response.json();
       
+      // LOG DE DEPURAÇÃO SOLICITADO
+      console.log("Dados recebidos da Edge Function:", data);
+
       if (onProgress) onProgress(100);
       
-      // Ajuste conforme sugerido: captura resultados do objeto e também o fileBase64 se existir
-      const results = data.results || (Array.isArray(data) ? data : []);
+      // Ajuste para capturar a chave 'results' do JSON enviado pela função
+      const results = data.results || [];
       const fileBase64 = data.fileBase64 || null;
       
       return {
