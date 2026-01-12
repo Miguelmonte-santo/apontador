@@ -75,14 +75,14 @@ const App: React.FC = () => {
               URL do Website
             </label>
             <div className="relative group">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
                 <Search className="h-5 w-5 text-brand-purple/50 group-focus-within:text-brand-purple transition-colors" />
               </div>
               <input
                 type="url"
                 id="url"
                 required
-                className="block w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-2xl text-brand-black placeholder-gray-400 focus:outline-none focus:border-brand-purple focus:ring-4 focus:ring-brand-purple/10 transition-all text-lg font-medium"
+                className="block w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-2xl bg-white text-brand-black placeholder-gray-400 focus:outline-none focus:border-brand-purple focus:ring-4 focus:ring-brand-purple/10 transition-all text-lg font-medium relative z-0"
                 placeholder="https://exemplo.com/produtos"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
